@@ -1,0 +1,191 @@
+\documentclass{article}
+\usepackage{amsmath}
+
+\begin{document}
+
+\section{Base model analysis}
+
+The corrected base model is
+\[
+\begin{aligned}
+S' &= S\left[r_S\left(1-\frac{S+\alpha R}{K}\right)
+- \lambda(t)\right], \\
+R' &= Rr_R\left(1-\frac{\beta S+R}{K}\right).
+\end{aligned}
+\]
+
+Here, $S(t)$ is the sensitive cancer cell population and
+$R(t)$ is the resistant cancer cell population at time $t$.
+Both populations consist of cancer cells. The difference is
+that the treatment affects sensitive cells, while resistant
+cells are assumed to be unaffected by it directly.
+
+The idea of adaptive therapy is that these two populations
+compete for resources. Treatment reduces the sensitive
+population, but this also frees space and resources for
+resistant cells. This is called competitive release.
+The goal is therefore to maintain enough sensitive cells
+to limit resistant growth, while keeping the total cancer
+population under control.
+
+The equations are based on assumptions about cell growth
+rather than derived directly from biological laws.
+We first assume that, without treatment or resource limits,
+the growth of a population is proportional to its size:
+\[
+S(t+\Delta t)-S(t)
+\approx r_S S(t)\Delta t.
+\]
+Dividing by $\Delta t$ and taking the limit gives
+\[
+S'=r_SS.
+\]
+This gives exponential growth:
+\[
+S(t)=S(0)e^{r_St}.
+\]
+The parameter $r_S$ is the growth rate per cell under these
+conditions. The same argument applies to $R$, with growth
+rate $r_R$.
+
+However, exponential growth assumes that resources do not
+run out. To account for limited resources, we introduce
+the carrying capacity $K$. For a single population, we write
+\[
+S'=r_SS\left(1-\frac{S}{K}\right).
+\]
+The idea is that growth slows down as the population gets
+closer to $K$. If $0<S<K$, the population grows.
+At $S=K$, its net growth is zero. If $S>K$, it decreases.
+
+Next, we include competition between the two populations.
+Sensitive cells do not only compete with other sensitive
+cells, but also with resistant cells. We therefore replace
+$S$ in the crowding term by
+\[
+S+\alpha R.
+\]
+Here, $\alpha$ describes how strongly resistant cells
+affect the sensitive population compared to sensitive
+cells themselves. For example, if $\alpha=2$, one resistant
+cell contributes twice as much to this crowding term as
+one sensitive cell.
+
+Similarly, resistant cells experience crowding through
+\[
+\beta S+R.
+\]
+So $\beta$ describes the effect of sensitive cells on
+resistant cells. Increasing $\beta$ makes sensitive cells
+stronger competitors against resistant cells.
+Increasing $\alpha$ has the opposite direction of influence:
+it makes resistant cells stronger competitors against
+sensitive cells.
+
+Finally, treatment removes sensitive cells at rate
+$\lambda(t)S$. We subtract this from their growth:
+\[
+S'=r_SS\left(1-\frac{S+\alpha R}{K}\right)-\lambda(t)S.
+\]
+There is no corresponding treatment term in the equation
+for $R$, because complete resistance is assumed.
+
+The parameters $r_S$, $r_R$, and $\lambda$ have units of
+inverse time. The parameters $\alpha$ and $\beta$ are
+dimensionless, while $K$ has the same units as $S$ and $R$.
+
+\subsection{When do the populations grow or decrease?}
+
+For $S>0$, we can divide the first equation by $S$:
+\[
+\frac{S'}{S}
+=
+r_S\left(1-\frac{S+\alpha R}{K}\right)-\lambda(t).
+\]
+This gives the relative growth rate of the sensitive
+population. The population decreases precisely when
+\[
+\lambda(t)>
+r_S\left(1-\frac{S+\alpha R}{K}\right).
+\]
+So treatment being present does not automatically mean
+that the sensitive population decreases. The treatment
+loss must be larger than its growth.
+
+For $R>0$ and $r_R>0$, the second equation gives
+\[
+\begin{aligned}
+R'>0 &\iff \beta S+R<K,\\
+R'=0 &\iff \beta S+R=K,\\
+R'<0 &\iff \beta S+R>K.
+\end{aligned}
+\]
+This shows how sensitive cells can limit resistant growth.
+A larger sensitive population increases the crowding
+experienced by resistant cells. If this crowding is strong
+enough, the resistant population decreases.
+
+For the baseline choice $\alpha=\beta=1$, both populations
+experience the same crowding factor:
+\[
+1-\frac{S+R}{K}.
+\]
+In particular, if $S+R<K$, the resistant population still
+grows. Sensitive cells can slow this growth down, but do
+not make it negative in this region.
+
+There is also a useful boundary observation. At $S+R=K$,
+\[
+(S+R)'=-\lambda(t)S\leq 0
+\]
+when $\lambda(t)\geq 0$. Therefore, a solution starting
+with $S+R\leq K$ cannot cross this boundary upwards.
+For this baseline case, the resistant population cannot
+decrease along such a solution. This limits what the
+base model can achieve: it can describe delaying resistant
+growth without describing its elimination.
+
+\subsection{Adaptive treatment}
+
+To model adaptive treatment, $\lambda(t)$ changes between
+zero and a fixed treatment rate $\lambda_{\mathrm{on}}$.
+Let
+\[
+N(t)=S(t)+R(t), \qquad N_0=N(0).
+\]
+
+In our simulation, treatment starts on. It is switched off
+when $N(t)$ falls to half its initial value and restarted
+when $N(t)$ returns to its initial value:
+\[
+\begin{aligned}
+N(t)\leq \tfrac12N_0
+&\quad\Rightarrow\quad \text{switch treatment off},\\
+N(t)\geq N_0
+&\quad\Rightarrow\quad \text{switch treatment on}.
+\end{aligned}
+\]
+Between these thresholds, the previous treatment state
+is kept.
+
+The idea is to avoid removing too many sensitive cells.
+When treatment stops, sensitive cells can recover and
+increase competition for resistant cells. Whether this
+controls the total population for longer depends on the
+parameters and initial conditions, so we compare it with
+continuous treatment and no treatment.
+
+\subsection{Assumptions and limitations}
+
+The model describes population sizes, not the positions
+or individual behaviour of cells. Resource competition
+is included through the crowding terms, but the resources
+themselves are not modelled.
+
+There is also no term describing sensitive cells becoming
+resistant. If $R(0)=0$, then $R(t)=0$ for all later times.
+We therefore need $R(0)>0$ to study resistance in this
+model. What we study is the growth of an existing resistant
+population, rather than the appearance of new resistance.
+
+\end{document}
