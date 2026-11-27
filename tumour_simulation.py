@@ -18,7 +18,7 @@ from dataclasses import dataclass, replace
 
 import numpy as np
 
-
+#verandering
 # 1. Model parameters: edit these to change the starting experiment.
 
 POLICIES = ("Untreated", "Continuous", "Adaptive")
