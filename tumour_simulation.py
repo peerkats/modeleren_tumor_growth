@@ -22,8 +22,8 @@ import numpy as np
 # 1. Model parameters: edit these to change the starting experiment.
 
 POLICIES = ("Untreated", "Continuous", "Adaptive")
-SIMULATION_DAYS = 1500
-TIME_STEP = 0.02
+SIMULATION_DAYS = 500
+TIME_STEP = 0.1
 
 
 @dataclass
@@ -88,73 +88,79 @@ def choose_treatment(policy, treatment_on, total, initial_total, stop_fraction):
 
 
 
-def rk4_step(population, step_size, treatment_on, parameters):
-    """Advance one step using fourth-order Runge-Kutta"""
-    slope_start = growth_rates(population, treatment_on, parameters)
-
-    midpoint = population + step_size * slope_start / 2
-    slope_middle_1 = growth_rates(midpoint, treatment_on, parameters)
-
-    midpoint = population + step_size * slope_middle_1 / 2
-    slope_middle_2 = growth_rates(midpoint, treatment_on, parameters)
-
-    endpoint = population + step_size * slope_middle_2
-    slope_end = growth_rates(endpoint, treatment_on, parameters)
-
-    average_slope = (
-        slope_start + 2 * slope_middle_1 + 2 * slope_middle_2 + slope_end
-    ) / 6
-    return population + step_size * average_slope
+def euler_step(population, step_size, treatment_on, parameters):
+    """Advance one step using the Euler method"""
+    slope = growth_rates(population, treatment_on, parameters)
+    return population + step_size * slope
 
 
 def simulate(parameters, policy="Adaptive", days=SIMULATION_DAYS, dt=TIME_STEP):
     """Solve the model; switching times are resolved to approximately dt."""
     p = parameters
+
     if policy not in POLICIES:
         raise ValueError(f"Unknown treatment policy: {policy}")
 
     values = list(vars(p).values()) + [days, dt]
     if not np.isfinite(values).all():
         raise ValueError("All parameters and times must be finite.")
+
     if min(p.rS, p.rR, p.alpha, p.beta, p.treatment_rate, p.S0, p.R0) < 0:
-        raise ValueError("Rates, competition coefficients and populations must be nonnegative.")
+        raise ValueError(
+            "Rates, competition coefficients and populations must be nonnegative."
+        )
+
     if days <= 0 or dt <= 0 or not 0 < p.stop_fraction < 1:
-        raise ValueError("Use positive days and dt, and a stop_fraction between 0 and 1.")
+        raise ValueError(
+            "Use positive days and dt, and a stop_fraction between 0 and 1."
+        )
+
     if p.S0 + p.R0 == 0:
         raise ValueError("Start with a nonzero tumour population.")
 
     number_of_steps = int(np.ceil(days / dt))
-    time = np.linspace(0, days, number_of_steps + 1)
-    step_size = days / number_of_steps
+    step_size = dt
+    time = np.arange(number_of_steps + 1) * step_size
 
-    population = np.zeros((len(time), 2))
+    population = np.zeros((number_of_steps + 1, 2))
     population[0] = [p.S0, p.R0]
-    treatment_history = np.zeros(len(time), dtype=bool)
-    treatment_days = np.zeros(len(time))
+
+    treatment_history = np.zeros(number_of_steps + 1, dtype=bool)
+    treatment_days = np.zeros(number_of_steps + 1)
 
     initial_total = p.S0 + p.R0
     treatment_on = policy != "Untreated"
 
-    for step in range(len(time)):
+    for step in range(number_of_steps):
         total = population[step].sum()
+
         treatment_on = choose_treatment(
-            policy, treatment_on, total, initial_total, p.stop_fraction
+            policy,
+            treatment_on,
+            total,
+            initial_total,
+            p.stop_fraction,
         )
+
         treatment_history[step] = treatment_on
 
-        if step == number_of_steps:
-            break  
-
-        population[step + 1] = rk4_step(
-            population[step], step_size, treatment_on, p
+        population[step + 1] = euler_step(
+            population[step],
+            step_size,
+            treatment_on,
+            p,
         )
+
         treatment_days[step + 1] = treatment_days[step]
         if treatment_on:
             treatment_days[step + 1] += step_size
 
-    # Do not hide numerical errors by forcing negative populations to zero.
+    treatment_history[-1] = treatment_on
+
     if not np.isfinite(population).all() or population.min() < -1e-10:
-        raise ArithmeticError("Invalid numerical solution. Try a smaller time step.")
+        raise ArithmeticError(
+            "Invalid numerical solution. Try a smaller time step."
+        )
 
     return Simulation(
         time=time,
